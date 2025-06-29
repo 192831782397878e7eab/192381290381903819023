@@ -354,6 +354,10 @@ if (command === 'say') {
     return;
   }
 });
-console.log('TOKEN length:', process.env.TOKEN.length);
+if (process.env.TOKEN) {
+  console.log('TOKEN length:', process.env.TOKEN.length);
+} else {
+  console.log('TOKEN is undefined!');
+}
 console.log('TOKEN:', process.env.TOKEN ? '[TOKEN EXISTS]' : '[NO TOKEN]');
 client.login(process.env.TOKEN);
