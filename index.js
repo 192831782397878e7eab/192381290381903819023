@@ -354,5 +354,6 @@ if (command === 'say') {
     return;
   }
 });
+console.log('TOKEN length:', process.env.TOKEN.length);
 console.log('TOKEN:', process.env.TOKEN ? '[TOKEN EXISTS]' : '[NO TOKEN]');
 client.login(process.env.TOKEN);
