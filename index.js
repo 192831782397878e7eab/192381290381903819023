@@ -10,6 +10,8 @@ const client = new Client({
   ]
 });
 
+let pokerTables = {};
+
 const fs = require('fs');
 const dbFile = './cashDB.json';
 let db = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile)) : {};
