@@ -377,6 +377,72 @@ if (command === 'give') {
 
   return message.channel.send(`${message.author} gave 💰 **${amount} coins** to ${target}.`);
 }
+
+    if (command === 'work') {
+  const user = getUser(message.author.id);
+  const now = Date.now();
+  const workCooldown = 30 * 60 * 1000;
+
+  if (user.lastWork && now - user.lastWork < workCooldown) {
+    const remaining = workCooldown - (now - user.lastWork);
+    const minutes = Math.floor(remaining / (60 * 1000));
+    const seconds = Math.floor((remaining % (60 * 1000)) / 1000);
+    return message.reply(`you are tired. come back in ${minutes}m ${seconds}s.`);
+  }
+
+  const earnings = Math.floor(Math.random() * 200) + 100;
+  user.cash += earnings;
+  user.lastWork = now;
+  saveDB();
+
+  return message.reply(`you worked hard and earned 💰 **${earnings} coins**!`);
+}
+
+    if (command === 'slots' || command === 'slot') {
+  const amount = parseInt(args[0]);
+  if (isNaN(amount) || amount <= 0) return message.reply("Enter a valid amount to bet.");
+
+  const user = getUser(message.author.id);
+  const now = Date.now();
+  const cooldown = 6 * 1000;
+
+  if (user.lastSlots && now - user.lastSlots < cooldown) {
+    const remaining = cooldown - (now - user.lastSlots);
+    const seconds = Math.ceil(remaining / 1000);
+    return message.reply(`Please wait ${seconds}s before playing slots again.`);
+  }
+
+  if (user.cash < amount) return message.reply("You don't have enough coins to bet that.");
+
+  const symbols = ['🍒', '🍋', '🍉', '🍇', '⭐', '🔔'];
+  const spin = [
+    symbols[Math.floor(Math.random() * symbols.length)],
+    symbols[Math.floor(Math.random() * symbols.length)],
+    symbols[Math.floor(Math.random() * symbols.length)]
+  ];
+
+  let winnings = 0;
+  if (spin[0] === spin[1] && spin[1] === spin[2]) {
+    winnings = amount * 5;
+  } else if (spin[0] === spin[1] || spin[1] === spin[2] || spin[0] === spin[2]) {
+    winnings = amount * 2;
+  } else {
+    winnings = -amount;
+  }
+
+  user.cash += winnings;
+  user.lastSlots = now;
+  saveDB();
+
+  const resultMessage = `🎰 | [${spin.join(' ')}]\n` +
+    (winnings > 0
+      ? `you won 💰 **${winnings} coins**!`
+      : `you lost 💸 **${amount} coins**. better luck next time!`);
+
+  return message.reply(resultMessage);
+}
+
+
     // ================== HELP COMMAND ==================
 
     if (command === 'help') {
@@ -404,6 +470,8 @@ if (command === 'give') {
 \`${prefix}bal or balance\` – check how much 💰 cash you have
 \`${prefix}coinflip heads/tails [amount]\` – bet coins on a 50/50 coinflip
 \`${prefix}give @user [amount]\` – send cash to another user
+\`${prefix}work\` – work every 30 minutes to earn cash
+\`${prefix}slots [amount]\` – play slots and try your luck (6s cooldown)
 
 \`${prefix}help\` – Show this help message
       `);
