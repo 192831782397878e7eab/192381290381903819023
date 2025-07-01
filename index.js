@@ -10,8 +10,6 @@ const client = new Client({
   ]
 });
 
-let pokerTables = {};
-
 const fs = require('fs');
 const dbFile = './cashDB.json';
 let db = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile)) : {};
@@ -484,7 +482,7 @@ if (command === 'give') {
   return message.channel.send(`Removed 💸 **${amount} coins** from ${target.tag}. New balance: 💰 **${user.cash} coins**.`);
 }
 
-if (command === 'roulette') {
+    if (command === 'roulette') {
   const color = args[0]?.toLowerCase();
   const amount = parseInt(args[1]);
 
@@ -526,7 +524,7 @@ if (command === 'roulette') {
   return message.channel.send(winText);
 }
 
-const suits = ['♠', '♥', '♦', '♣'];
+    const suits = ['♠', '♥', '♦', '♣'];
 const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
 // Simple hand rank evaluation function (very basic, can be improved)
@@ -918,25 +916,24 @@ Type \`${prefix}poker [bet|raise|call|check|fold] [amount]\` to play.`);
 \`${prefix}work\` – work every 30 minutes to earn cash
 \`${prefix}slots [amount]\` – play slots and try your luck (6s cooldown)
 \`${prefix}roulette [color] [amount]\` – bet coins on red/black (2x) or green (14x)
-\`${prefix}poker\` – create or join a multiplayer poker room (type \`${prefix}poker\` to see options)
-
-**Poker Commands:**
-
-\`${prefix}poker create\` – create a poker table
-\`${prefix}poker join\` – join the table
-\`${prefix}poker leave\` – leave the table
-\`${prefix}poker cancel\` – cancel the table (host only)
-\`${prefix}poker start\` – start the game (host only)
-\`${prefix}poker status\` – show current game status
-\`${prefix}poker bet [amount]\` – bet coins
-\`${prefix}poker raise [amount]\` – raise the bet
-\`${prefix}poker call\` – call the current bet
-\`${prefix}poker check\` – check (if no bet)
-\`${prefix}poker fold\` – fold your hand
 
 **Admin Cash Commands:**
 \`${prefix}givemoney [@user] [amount]\` – give coins to yourself or another user (admin only)
 \`${prefix}removemoney [@user] [amount]\` – remove coins from a user (admin only)
+
+**Poker Commands:**
+
+\`${prefix}poker create\ – create a poker table
+\`${prefix}poker join\ – join the table
+\`${prefix}poker leave\ – leave the table
+\`${prefix}poker cancel\ – cancel the table (host only)
+\`${prefix}poker start\ – start the game (host only)
+\`${prefix}poker status\ – show current game status
+\`${prefix}poker bet [amount]\ – bet coins
+\`${prefix}poker raise [amount]\ – raise the bet
+\`${prefix}poker call\ – call the current bet
+\`${prefix}poker check\ – check (if no bet)
+\`${prefix}poker fold\ – fold your hand
 
 \`${prefix}help\` – Show this help message
       `);
