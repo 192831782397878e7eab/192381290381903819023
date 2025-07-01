@@ -482,7 +482,123 @@ if (command === 'give') {
   return message.channel.send(`Removed 💸 **${amount} coins** from ${target.tag}. New balance: 💰 **${user.cash} coins**.`);
 }
 
+if (command === 'roulette') {
+  const color = args[0]?.toLowerCase();
+  const amount = parseInt(args[1]);
 
+  if (!['red', 'black', 'green'].includes(color)) {
+    return message.reply("Choose a valid color: `red`, `black`, or `green`.");
+  }
+
+  if (!amount || isNaN(amount) || amount <= 0) {
+    return message.reply("Enter a valid coin amount to bet.");
+  }
+
+  const user = getUser(message.author.id);
+  if (user.cash < amount) {
+    return message.reply("You don't have enough coins.");
+  }
+
+  const spin = Math.floor(Math.random() * 37); // 0–36
+  let resultColor;
+
+  if (spin === 0) resultColor = 'green';
+  else if (spin % 2 === 0) resultColor = 'black';
+  else resultColor = 'red';
+
+  let winAmount = 0;
+  let winText = `🎰 The ball landed on **${spin} (${resultColor})**.`;
+
+  if (color === resultColor) {
+    if (color === 'green') winAmount = amount * 14;
+    else winAmount = amount * 2;
+
+    user.cash += winAmount;
+    winText += `\nYou won 💰 **${winAmount} coins**! 🎉`;
+  } else {
+    user.cash -= amount;
+    winText += `\nYou lost 💸 **${amount} coins**.`;
+  }
+
+  saveDB();
+  return message.channel.send(winText);
+}
+
+    const pokerTables = {};
+
+if (command === 'poker') {
+  const sub = args[0]?.toLowerCase();
+
+  // Create table
+  if (sub === 'create') {
+    if (pokerTables[message.channel.id]) {
+      return message.reply("A poker table already exists in this channel.");
+    }
+
+    pokerTables[message.channel.id] = {
+      host: message.author.id,
+      players: [message.author.id],
+      started: false
+    };
+
+    return message.channel.send(`🃏 ${message.author} created a poker table! Type \`${prefix}poker join\` to join.`);
+  }
+
+  if (sub === 'join') {
+    const table = pokerTables[message.channel.id];
+    if (!table) return message.reply("No poker table exists. Use `.poker create` first.");
+    if (table.started) return message.reply("The game has already started.");
+    if (table.players.includes(message.author.id)) return message.reply("You're already at the table.");
+
+    table.players.push(message.author.id);
+    return message.channel.send(`${message.author} joined the poker table. Players: ${table.players.length}`);
+  }
+
+  if (sub === 'leave') {
+    const table = pokerTables[message.channel.id];
+    if (!table) return message.reply("No poker table in this channel.");
+
+    const index = table.players.indexOf(message.author.id);
+    if (index === -1) return message.reply("You're not at the table.");
+
+    table.players.splice(index, 1);
+    if (table.players.length === 0) {
+      delete pokerTables[message.channel.id];
+      return message.channel.send("Everyone left. Poker table closed.");
+    }
+
+    return message.channel.send(`${message.author} left the table.`);
+  }
+
+  if (sub === 'cancel') {
+    const table = pokerTables[message.channel.id];
+    if (!table) return message.reply("No poker table in this channel.");
+    if (table.host !== message.author.id) return message.reply("Only the host can cancel the table.");
+
+    delete pokerTables[message.channel.id];
+    return message.channel.send(`Poker table cancelled by ${message.author}.`);
+  }
+
+  if (sub === 'start') {
+    const table = pokerTables[message.channel.id];
+    if (!table) return message.reply("No poker table here.");
+    if (table.host !== message.author.id) return message.reply("Only the host can start the game.");
+    if (table.players.length < 2) return message.reply("Need at least 2 players to start.");
+
+    table.started = true;
+
+    const mentions = table.players.map(id => `<@${id}>`).join(', ');
+    return message.channel.send(`🎲 Poker game started with: ${mentions}\n(Dealing cards coming soon...)`);
+  }
+
+  return message.channel.send(`Available poker commands:
+\`${prefix}poker create\` – create a poker table
+\`${prefix}poker join\` – join the table
+\`${prefix}poker leave\` – leave the table
+\`${prefix}poker cancel\` – cancel the table (host only)
+\`${prefix}poker start\` – start the game (host only)
+  `);
+}
 
     // ================== HELP COMMAND ==================
 
@@ -513,6 +629,8 @@ if (command === 'give') {
 \`${prefix}give @user [amount]\` – send cash to another user
 \`${prefix}work\` – work every 30 minutes to earn cash
 \`${prefix}slots [amount]\` – play slots and try your luck (6s cooldown)
+\`${prefix}roulette [color] [amount]\` – bet coins on red/black (2x) or green (14x)
+\`${prefix}poker\` – create or join a multiplayer poker room (type \`${prefix}poker\` to see options)
 
 **Admin Cash Commands:**
 \`${prefix}givemoney [@user] [amount]\` – give coins to yourself or another user (admin only)
