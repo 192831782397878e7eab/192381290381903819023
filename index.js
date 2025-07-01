@@ -909,15 +909,17 @@ if (command === 'help') {
     .setTitle('Help Commands')
     .setDescription('Here is a list of available commands:')
     .addFields(
-      { name: 'Moderation Commands', value:
-        `\`${prefix}ban @user\` – ban a user
+      {
+        name: 'Moderation Commands', value:
+          `\`${prefix}ban @user\` – ban a user
 \`${prefix}kick @user\` – kick a user
 \`${prefix}delmsg [amount]\` – delete a specified amount of messages
 \`${prefix}mute @user\` – mute a user
 \`${prefix}unmute @user\` – unmute a user`
       },
-      { name: 'User Commands', value:
-        `\`${prefix}ping\` – pong.
+      {
+        name: 'User Commands', value:
+          `\`${prefix}ping\` – pong.
 \`${prefix}say [text]\` – make the bot say something
 \`${prefix}8ball [question]\` – ask the magic 8ball
 \`${prefix}cf\` – flip a coin
@@ -927,8 +929,9 @@ if (command === 'help') {
 \`${prefix}bypass\` – chat bypasser for roblox
 \`${prefix}phonebypass\` – bypasses for yggdrasil and payphone`
       },
-      { name: 'User Cash Commands', value:
-        `\`${prefix}daily\` – collect a daily 💰 reward (once every 24h)
+      {
+        name: 'User Cash Commands', value:
+          `\`${prefix}daily\` – collect a daily 💰 reward (once every 24h)
 \`${prefix}bal or balance\` – check how much 💰 cash you have
 \`${prefix}coinflip heads/tails [amount]\` – bet coins on a 50/50 coinflip
 \`${prefix}give @user [amount]\` – send cash to another user
@@ -936,12 +939,14 @@ if (command === 'help') {
 \`${prefix}slots [amount]\` – play slots and try your luck (6s cooldown)
 \`${prefix}roulette [color] [amount]\` – bet coins on red/black (2x) or green (14x)`
       },
-      { name: 'Admin Cash Commands', value:
-        `\`${prefix}givemoney [@user] [amount]\` – give coins to yourself or another user (admin only)
+      {
+        name: 'Admin Cash Commands', value:
+          `\`${prefix}givemoney [@user] [amount]\` – give coins to yourself or another user (admin only)
 \`${prefix}removemoney [@user] [amount]\` – remove coins from a user (admin only)`
       },
-      { name: 'Poker Commands', value:
-        `\`${prefix}poker create\` – create a poker table
+      {
+        name: 'Poker Commands', value:
+          `\`${prefix}poker create\` – create a poker table
 \`${prefix}poker join\` – join the table
 \`${prefix}poker leave\` – leave the table
 \`${prefix}poker cancel\` – cancel the table (host only)
@@ -953,8 +958,9 @@ if (command === 'help') {
 \`${prefix}poker check\` – check (if no bet)
 \`${prefix}poker fold\` – fold your hand`
       },
-      { name: 'Other', value:
-        `\`${prefix}help\` – Show this help message`
+      {
+        name: 'Other', value:
+          `\`${prefix}help\` – Show this help message`
       }
     )
     .setFooter({ text: 'Bot Help' })
@@ -962,6 +968,7 @@ if (command === 'help') {
 
   return message.channel.send({ embeds: [helpEmbed] });
 }
+
 
   // ================== LINK BLOCKING ==================
 
