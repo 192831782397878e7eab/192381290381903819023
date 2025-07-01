@@ -903,73 +903,58 @@ Type \`${prefix}poker [bet|raise|call|check|fold] [amount]\` to play.`);
 }
 
     // ================== HELP COMMAND ==================
-if (command === 'help') {
-  const helpEmbed = new EmbedBuilder()
-    .setColor('#9b59b6')
-    .setTitle('📖 Help Menu')
-    .setDescription('Here are all the available commands:')
-    .addFields(
-      {
-        name: '🛠️ Moderation',
-        value:
-          `\`${prefix}ban @user\` – Ban a user\n` +
-          `\`${prefix}kick @user\` – Kick a user\n` +
-          `\`${prefix}mute @user\` – Mute a user\n` +
-          `\`${prefix}unmute @user\` – Unmute a user\n` +
-          `\`${prefix}delmsg [amount]\` – Delete messages (1–100)`
-      },
-      {
-        name: '👤 User',
-        value:
-          `\`${prefix}ping\` – Pong!\n` +
-          `\`${prefix}say [text]\` – Make the bot say something\n` +
-          `\`${prefix}8ball [question]\` – Magic 8-ball\n` +
-          `\`${prefix}cf\` – Flip a coin\n` +
-          `\`${prefix}roll\` – Roll 1–100\n` +
-          `\`${prefix}cat\` – Get a random cat\n` +
-          `\`${prefix}slur @user\` – [❌ highly offensive; consider removing]\n` +
-          `\`${prefix}bypass\` – Roblox chat bypasser\n` +
-          `\`${prefix}phonebypass\` – Bypasses for Payphone/Yggdrasil`
-      },
-      {
-        name: '💰 Economy',
-        value:
-          `\`${prefix}daily\` – Daily reward (24h cooldown)\n` +
-          `\`${prefix}bal\` or \`balance\` – Check your balance\n` +
-          `\`${prefix}work\` – Work every 30 minutes\n` +
-          `\`${prefix}give @user [amount]\` – Send cash\n` +
-          `\`${prefix}coinflip heads/tails [amount]\` – 50/50 gamble\n` +
-          `\`${prefix}slots [amount]\` – Spin the slot machine\n` +
-          `\`${prefix}roulette [color] [amount]\` – Bet on red/black/green`
-      },
-      {
-        name: '🛡️ Admin',
-        value:
-          `\`${prefix}givemoney [@user] [amount]\` – Give coins (admin only)\n` +
-          `\`${prefix}removemoney [@user] [amount]\` – Remove coins (admin only)`
-      },
-      {
-        name: '🃏 Poker',
-        value:
-          `\`${prefix}poker create\` – Start a new poker table\n` +
-          `\`${prefix}poker join\` – Join an open poker table\n` +
-          `\`${prefix}poker leave\` – Leave the poker table\n` +
-          `\`${prefix}poker cancel\` – Cancel poker (host only)\n` +
-          `\`${prefix}poker start\` – Begin the game\n` +
-          `\`${prefix}poker status\` – Check game status\n` +
-          `\`${prefix}poker bet/raise/call/check/fold [amount]\` – Play`
-      },
-      {
-        name: '❓ Other',
-        value: `\`${prefix}help\` – Show this help menu`
-      }
-    )
-    .setFooter({ text: 'Use .help again any time for a list of commands.' })
-    .setTimestamp();
 
-  return message.channel.send({ embeds: [helpEmbed] });
-}
+    if (command === 'help') {
+      return message.channel.send(`
+**Moderation Commands:**
+\`${prefix}ban @user\` – ban a user
+\`${prefix}kick @user\` – kick a user
+\`${prefix}delmsg [amount]\` – delete a specified amount of messages
+\`${prefix}mute @user\` – mute a user
+\`${prefix}unmute @user\` – unmute a user
 
+**User Commands:**
+\`${prefix}ping\` – pong.
+\`${prefix}say [text]\` – make the bot say something
+\`${prefix}8ball [question]\` – ask the magic 8ball
+\`${prefix}cf\` – flip a coin
+\`${prefix}roll\` – roll a number (1-100)
+\`${prefix}slur @user\` – slur at someone
+\`${prefix}cat\` – random cat pic
+\`${prefix}bypass\` – chat bypasser for roblox
+\`${prefix}phonebypass\` – bypasses for yggdrasil and payphone
+
+**User Cash Commands:**
+\`${prefix}daily\` – collect a daily 💰 reward (once every 24h)
+\`${prefix}bal or balance\` – check how much 💰 cash you have
+\`${prefix}coinflip heads/tails [amount]\` – bet coins on a 50/50 coinflip
+\`${prefix}give @user [amount]\` – send cash to another user
+\`${prefix}work\` – work every 30 minutes to earn cash
+\`${prefix}slots [amount]\` – play slots and try your luck (6s cooldown)
+\`${prefix}roulette [color] [amount]\` – bet coins on red/black (2x) or green (14x)
+
+**Admin Cash Commands:**
+\`${prefix}givemoney [@user] [amount]\` – give coins to yourself or another user (admin only)
+\`${prefix}removemoney [@user] [amount]\` – remove coins from a user (admin only)
+
+**Poker Commands:**
+
+\`${prefix}poker create\ – create a poker table
+\`${prefix}poker join\ – join the table
+\`${prefix}poker leave\ – leave the table
+\`${prefix}poker cancel\ – cancel the table (host only)
+\`${prefix}poker start\ – start the game (host only)
+\`${prefix}poker status\ – show current game status
+\`${prefix}poker bet [amount]\ – bet coins
+\`${prefix}poker raise [amount]\ – raise the bet
+\`${prefix}poker call\ – call the current bet
+\`${prefix}poker check\ – check (if no bet)
+\`${prefix}poker fold\ – fold your hand
+
+\`${prefix}help\` – Show this help message
+      `);
+    }
+  }
 
   // ================== LINK BLOCKING ==================
 
