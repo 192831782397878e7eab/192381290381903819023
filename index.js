@@ -526,26 +526,58 @@ if (command === 'roulette') {
   return message.channel.send(winText);
 }
 
+const suits = ['♠', '♥', '♦', '♣'];
+const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+
+// Simple hand rank evaluation function (very basic, can be improved)
+function evaluateHand(cards) {
+  // For simplicity, return highest rank number for now
+  const rankOrder = ranks.reduce((obj, r, i) => { obj[r] = i; return obj; }, {});
+  let values = cards.map(c => rankOrder[c.slice(0, -1)]).sort((a, b) => b - a);
+  return values[0]; // highest card value as score (simplify)
+}
+
+// Function to shuffle deck
+function shuffle(deck) {
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+}
+
+if (!global.pokerTables) global.pokerTables = {};
+
 if (command === 'poker') {
   const sub = args[0]?.toLowerCase();
 
-  // Create table
+  // Setup poker table
   if (sub === 'create') {
-    if (pokerTables[message.channel.id]) {
+    if (global.pokerTables[message.channel.id]) {
       return message.reply("A poker table already exists in this channel.");
     }
 
-    pokerTables[message.channel.id] = {
+    global.pokerTables[message.channel.id] = {
       host: message.author.id,
       players: [message.author.id],
-      started: false
+      started: false,
+      deck: [],
+      pot: 0,
+      bets: {},
+      folded: new Set(),
+      communityCards: [],
+      currentBet: 0,
+      currentPlayerIndex: 0,
+      round: 'pre-flop',
+      hands: {}
     };
 
     return message.channel.send(`🃏 ${message.author} created a poker table! Type \`${prefix}poker join\` to join.`);
   }
 
+  // Join poker table
   if (sub === 'join') {
-    const table = pokerTables[message.channel.id];
+    const table = global.pokerTables[message.channel.id];
     if (!table) return message.reply("No poker table exists. Use `.poker create` first.");
     if (table.started) return message.reply("The game has already started.");
     if (table.players.includes(message.author.id)) return message.reply("You're already at the table.");
@@ -554,51 +586,307 @@ if (command === 'poker') {
     return message.channel.send(`${message.author} joined the poker table. Players: ${table.players.length}`);
   }
 
+  // Leave poker table
   if (sub === 'leave') {
-    const table = pokerTables[message.channel.id];
+    const table = global.pokerTables[message.channel.id];
     if (!table) return message.reply("No poker table in this channel.");
 
-    const index = table.players.indexOf(message.author.id);
-    if (index === -1) return message.reply("You're not at the table.");
+    const idx = table.players.indexOf(message.author.id);
+    if (idx === -1) return message.reply("You're not at the table.");
 
-    table.players.splice(index, 1);
+    table.players.splice(idx, 1);
+    table.folded.delete(message.author.id);
+    delete table.bets[message.author.id];
+    delete table.hands[message.author.id];
+
     if (table.players.length === 0) {
-      delete pokerTables[message.channel.id];
+      delete global.pokerTables[message.channel.id];
       return message.channel.send("Everyone left. Poker table closed.");
     }
 
     return message.channel.send(`${message.author} left the table.`);
   }
 
+  // Cancel poker table
   if (sub === 'cancel') {
-    const table = pokerTables[message.channel.id];
+    const table = global.pokerTables[message.channel.id];
     if (!table) return message.reply("No poker table in this channel.");
     if (table.host !== message.author.id) return message.reply("Only the host can cancel the table.");
 
-    delete pokerTables[message.channel.id];
+    delete global.pokerTables[message.channel.id];
     return message.channel.send(`Poker table cancelled by ${message.author}.`);
   }
 
+  // Helper: advance to next player who has not folded
+  function advancePlayer(table) {
+    do {
+      table.currentPlayerIndex = (table.currentPlayerIndex + 1) % table.players.length;
+    } while (table.folded.has(table.players[table.currentPlayerIndex]));
+  }
+
+  // Helper: deal community cards according to round
+  function dealCommunity(table) {
+    if (table.round === 'flop') {
+      table.communityCards.push(table.deck.pop(), table.deck.pop(), table.deck.pop());
+    } else if (table.round === 'turn' || table.round === 'river') {
+      table.communityCards.push(table.deck.pop());
+    }
+  }
+
+  // Helper: check if betting round is over
+  function bettingRoundOver(table) {
+    // All players have matched current bet or folded
+    for (const p of table.players) {
+      if (table.folded.has(p)) continue;
+      if ((table.bets[p] || 0) < table.currentBet) return false;
+    }
+    return true;
+  }
+
+  // Start poker game
   if (sub === 'start') {
-    const table = pokerTables[message.channel.id];
+    const table = global.pokerTables[message.channel.id];
     if (!table) return message.reply("No poker table here.");
     if (table.host !== message.author.id) return message.reply("Only the host can start the game.");
     if (table.players.length < 2) return message.reply("Need at least 2 players to start.");
 
+    if (table.started) return message.reply("Game already started.");
+
     table.started = true;
+    table.deck = [];
+    table.pot = 0;
+    table.bets = {};
+    table.folded = new Set();
+    table.communityCards = [];
+    table.currentBet = 0;
+    table.currentPlayerIndex = 0;
+    table.round = 'pre-flop';
+    table.hands = {};
+
+    // Build and shuffle deck
+    for (const suit of suits) {
+      for (const rank of ranks) {
+        table.deck.push(rank + suit);
+      }
+    }
+    shuffle(table.deck);
+
+    // Deal two cards to each player
+    for (const playerId of table.players) {
+      table.hands[playerId] = [table.deck.pop(), table.deck.pop()];
+    }
+
+    // DM hole cards to each player
+    for (const playerId of table.players) {
+      const user = await client.users.fetch(playerId);
+      const hand = table.hands[playerId];
+      try {
+        await user.send(`🃏 Your poker hand: ${hand.join(' ')}`);
+      } catch {
+        message.channel.send(`<@${playerId}>, I couldn't DM you your cards. Please enable DMs from server members.`);
+      }
+    }
 
     const mentions = table.players.map(id => `<@${id}>`).join(', ');
-    return message.channel.send(`🎲 Poker game started with: ${mentions}\n(Dealing cards coming soon...)`);
+
+    return message.channel.send(`🎲 Poker game started with: ${mentions}\nIt's <@${table.players[table.currentPlayerIndex]}>'s turn to act.\nType \`${prefix}poker bet [amount]\`, \`${prefix}poker check\`, or \`${prefix}poker fold\`.`);
   }
 
-  return message.channel.send(`Available poker commands:
-\`${prefix}poker create\` – create a poker table
-\`${prefix}poker join\` – join the table
-\`${prefix}poker leave\` – leave the table
-\`${prefix}poker cancel\` – cancel the table (host only)
-\`${prefix}poker start\` – start the game (host only)
-  `);
-}
+  // Player actions during game
+  if (['bet', 'raise', 'call', 'check', 'fold'].includes(sub)) {
+    const table = global.pokerTables[message.channel.id];
+    if (!table) return message.reply("No poker game in progress here.");
+    if (!table.started) return message.reply("The game hasn't started yet.");
+
+    const playerId = message.author.id;
+    if (table.players[table.currentPlayerIndex] !== playerId) {
+      return message.reply("It's not your turn.");
+    }
+    if (table.folded.has(playerId)) {
+      return message.reply("You have already folded.");
+    }
+
+    const user = getUser(playerId);
+    const minBet = table.currentBet;
+
+    if (sub === 'fold') {
+      table.folded.add(playerId);
+      message.channel.send(`<@${playerId}> folds.`);
+
+      // If only one player left, they win pot
+      const activePlayers = table.players.filter(p => !table.folded.has(p));
+      if (activePlayers.length === 1) {
+        const winner = activePlayers[0];
+        user.cash += table.pot;
+        saveDB();
+
+        delete global.pokerTables[message.channel.id];
+        return message.channel.send(`🏆 <@${winner}> wins the pot of 💰 **${table.pot} coins** by default (everyone else folded)!`);
+      }
+
+      // Advance to next player
+      advancePlayer(table);
+      return message.channel.send(`It's now <@${table.players[table.currentPlayerIndex]}>'s turn.`);
+    }
+
+    if (sub === 'check') {
+      if ((table.bets[playerId] || 0) < table.currentBet) {
+        return message.reply("You must call or raise to match the current bet.");
+      }
+      message.channel.send(`<@${playerId}> checks.`);
+
+      // Advance turn, check if betting round over
+      advancePlayer(table);
+      if (bettingRoundOver(table)) {
+        // Move to next round
+        if (table.round === 'pre-flop') table.round = 'flop';
+        else if (table.round === 'flop') table.round = 'turn';
+        else if (table.round === 'turn') table.round = 'river';
+        else if (table.round === 'river') {
+          // Showdown
+          const community = table.communityCards;
+          let bestScore = -1;
+          let winnerId = null;
+
+          // For each active player, evaluate hand + community
+          for (const p of table.players) {
+            if (table.folded.has(p)) continue;
+            const cards = [...table.hands[p], ...community];
+            const score = evaluateHand(cards);
+            if (score > bestScore) {
+              bestScore = score;
+              winnerId = p;
+            }
+          }
+
+          const winnerUser = await client.users.fetch(winnerId);
+          winnerUser ? message.channel.send(`🏆 <@${winnerId}> wins with the best hand! 💰 **${table.pot} coins**`) : null;
+          const winnerUserDB = getUser(winnerId);
+          winnerUserDB.cash += table.pot;
+          saveDB();
+
+          delete global.pokerTables[message.channel.id];
+          return;
+        } else {
+          dealCommunity(table);
+          message.channel.send(`📢 Round is now **${table.round}**. Community cards: ${table.communityCards.join(' ')}`);
+        }
+        // Reset bets for new round
+        table.currentBet = 0;
+        table.bets = {};
+      }
+
+      return message.channel.send(`It's now <@${table.players[table.currentPlayerIndex]}>'s turn.`);
+    }
+
+    if (sub === 'call') {
+      const playerBet = table.bets[playerId] || 0;
+      const toCall = table.currentBet - playerBet;
+
+      if (toCall <= 0) {
+        return message.reply("There's nothing to call. You can check or bet.");
+      }
+      if (user.cash < toCall) return message.reply("You don't have enough coins to call.");
+
+      user.cash -= toCall;
+      table.pot += toCall;
+      table.bets[playerId] = table.currentBet;
+      saveDB();
+
+      message.channel.send(`<@${playerId}> calls 💰 **${toCall} coins**.`);
+
+      // Advance turn, check if betting round over
+      advancePlayer(table);
+      if (bettingRoundOver(table)) {
+        // Move to next round (same logic as check)
+        if (table.round === 'pre-flop') table.round = 'flop';
+        else if (table.round === 'flop') table.round = 'turn';
+        else if (table.round === 'turn') table.round = 'river';
+        else if (table.round === 'river') {
+          // Showdown
+          const community = table.communityCards;
+          let bestScore = -1;
+          let winnerId = null;
+
+          for (const p of table.players) {
+            if (table.folded.has(p)) continue;
+            const cards = [...table.hands[p], ...community];
+            const score = evaluateHand(cards);
+            if (score > bestScore) {
+              bestScore = score;
+              winnerId = p;
+            }
+          }
+
+          const winnerUser = await client.users.fetch(winnerId);
+          winnerUser ? message.channel.send(`🏆 <@${winnerId}> wins with the best hand! 💰 **${table.pot} coins**`) : null;
+          const winnerUserDB = getUser(winnerId);
+          winnerUserDB.cash += table.pot;
+          saveDB();
+
+          delete global.pokerTables[message.channel.id];
+          return;
+        } else {
+          dealCommunity(table);
+          message.channel.send(`📢 Round is now **${table.round}**. Community cards: ${table.communityCards.join(' ')}`);
+        }
+        table.currentBet = 0;
+        table.bets = {};
+      }
+
+      return message.channel.send(`It's now <@${table.players[table.currentPlayerIndex]}>'s turn.`);
+    }
+
+    if (sub === 'bet' || sub === 'raise') {
+      const amount = parseInt(args[1]);
+      if (isNaN(amount) || amount <= 0) {
+        return message.reply("Please specify a valid bet amount.");
+      }
+      const user = getUser(playerId);
+      const playerBet = table.bets[playerId] || 0;
+      const toCall = table.currentBet - playerBet;
+
+      if (amount < toCall) {
+        return message.reply(`Your bet must be at least ${toCall} coins to call or raise.`);
+      }
+      if (user.cash < amount) return message.reply("You don't have enough coins for that bet.");
+
+      // Deduct amount, add to pot, update currentBet
+      user.cash -= amount;
+      table.pot += amount;
+      table.bets[playerId] = (table.bets[playerId] || 0) + amount;
+      if (amount > table.currentBet) table.currentBet = amount;
+      saveDB();
+
+      message.channel.send(`<@${playerId}> ${sub === 'bet' ? 'bets' : 'raises'} 💰 **${amount} coins**.`);
+
+      // Advance turn
+      advancePlayer(table);
+
+      return message.channel.send(`It's now <@${table.players[table.currentPlayerIndex]}>'s turn.`);
+    }
+  }
+
+  // Show poker table status
+  if (!sub || sub === 'status') {
+    const table = global.pokerTables[message.channel.id];
+    if (!table) return message.reply("No poker table in this channel.");
+
+    const playersList = table.players.map((id, i) => {
+      const folded = table.folded.has(id) ? ' (folded)' : '';
+      const current = table.currentPlayerIndex === i ? ' <-- current turn' : '';
+      return `<@${id}>${folded}${current}`;
+    }).join('\n');
+
+    return message.channel.send(`🃏 Poker Table Status:
+Players:
+${playersList}
+Pot: 💰 **${table.pot} coins**
+Community Cards: ${table.communityCards.join(' ') || 'None'}
+Current Round: ${table.round}
+Current Bet: 💰 **${table.currentBet} coins**
+Type \`${prefix}poker [bet|raise|call|check|fold] [amount]\` to play.`);
+  }
 
     // ================== HELP COMMAND ==================
 
@@ -631,6 +919,20 @@ if (command === 'poker') {
 \`${prefix}slots [amount]\` – play slots and try your luck (6s cooldown)
 \`${prefix}roulette [color] [amount]\` – bet coins on red/black (2x) or green (14x)
 \`${prefix}poker\` – create or join a multiplayer poker room (type \`${prefix}poker\` to see options)
+
+**Poker Commands:**
+
+\`${prefix}poker create\` – create a poker table
+\`${prefix}poker join\` – join the table
+\`${prefix}poker leave\` – leave the table
+\`${prefix}poker cancel\` – cancel the table (host only)
+\`${prefix}poker start\` – start the game (host only)
+\`${prefix}poker status\` – show current game status
+\`${prefix}poker bet [amount]\` – bet coins
+\`${prefix}poker raise [amount]\` – raise the bet
+\`${prefix}poker call\` – call the current bet
+\`${prefix}poker check\` – check (if no bet)
+\`${prefix}poker fold\` – fold your hand
 
 **Admin Cash Commands:**
 \`${prefix}givemoney [@user] [amount]\` – give coins to yourself or another user (admin only)
