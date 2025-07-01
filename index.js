@@ -903,8 +903,7 @@ Type \`${prefix}poker [bet|raise|call|check|fold] [amount]\` to play.`);
 }
 
     // ================== HELP COMMAND ==================
-
-   if (command === 'help') {
+if (command === 'help') {
   const helpEmbed = new EmbedBuilder()
     .setColor('#0099ff')
     .setTitle('Help Commands')
@@ -963,7 +962,6 @@ Type \`${prefix}poker [bet|raise|call|check|fold] [amount]\` to play.`);
 
   return message.channel.send({ embeds: [helpEmbed] });
 }
-
 
   // ================== LINK BLOCKING ==================
 
