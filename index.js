@@ -902,6 +902,147 @@ Type \`${prefix}poker [bet|raise|call|check|fold] [amount]\` to play.`);
   `);
 }
 
+    if (!global.rrRooms) global.rrRooms = {};
+
+if (command === 'rr') {
+  const sub = args[0]?.toLowerCase();
+
+  // Create room
+  if (sub === 'create') {
+    if (global.rrRooms[message.channel.id]) {
+      return message.reply('A Russian Roulette room already exists in this channel.');
+    }
+    global.rrRooms[message.channel.id] = {
+      host: message.author.id,
+      players: [message.author.id],
+      started: false,
+      bulletChamber: Math.floor(Math.random() * 6) + 1, // 1 to 6
+      currentChamber: 1,
+      currentTurn: 0
+    };
+    return message.channel.send(`🔫 ${message.author} created a Russian Roulette room! Type \`${prefix}rr join\` to join. Max 6 players.`);
+  }
+
+  // Join room
+  if (sub === 'join') {
+    const room = global.rrRooms[message.channel.id];
+    if (!room) return message.reply('No Russian Roulette room exists here. Use `.rr create` first.');
+    if (room.started) return message.reply('The game has already started.');
+    if (room.players.includes(message.author.id)) return message.reply('You are already in the room.');
+    if (room.players.length >= 6) return message.reply('Room is full (max 6 players).');
+
+    room.players.push(message.author.id);
+    return message.channel.send(`${message.author} joined the Russian Roulette room. Players: ${room.players.length}`);
+  }
+
+  // Leave room
+  if (sub === 'leave') {
+    const room = global.rrRooms[message.channel.id];
+    if (!room) return message.reply('No Russian Roulette room exists here.');
+
+    const idx = room.players.indexOf(message.author.id);
+    if (idx === -1) return message.reply('You are not in the room.');
+
+    room.players.splice(idx, 1);
+
+    if (room.players.length === 0) {
+      delete global.rrRooms[message.channel.id];
+      return message.channel.send('Everyone left. Russian Roulette room closed.');
+    }
+
+    // If host left, assign new host
+    if (room.host === message.author.id) {
+      room.host = room.players[0];
+      message.channel.send(`Host left. New host is <@${room.host}>.`);
+    }
+
+    return message.channel.send(`${message.author} left the Russian Roulette room.`);
+  }
+
+  // Cancel room (host only)
+  if (sub === 'cancel') {
+    const room = global.rrRooms[message.channel.id];
+    if (!room) return message.reply('No Russian Roulette room exists here.');
+    if (room.host !== message.author.id) return message.reply('Only the host can cancel the room.');
+
+    delete global.rrRooms[message.channel.id];
+    return message.channel.send(`Russian Roulette room cancelled by ${message.author}.`);
+  }
+
+  // Start game (host only)
+  if (sub === 'start') {
+    const room = global.rrRooms[message.channel.id];
+    if (!room) return message.reply('No Russian Roulette room exists here.');
+    if (room.host !== message.author.id) return message.reply('Only the host can start the game.');
+    if (room.players.length < 2) return message.reply('Need at least 2 players to start.');
+
+    room.started = true;
+    room.bulletChamber = Math.floor(Math.random() * 6) + 1;
+    room.currentChamber = 1;
+    room.currentTurn = 0;
+
+    message.channel.send(`🔫 Russian Roulette game started with players: ${room.players.map(id => `<@${id}>`).join(', ')}.\nIt's <@${room.players[0]}>'s turn! Type \`${prefix}rr pull\` to pull the trigger.`);
+
+    return;
+  }
+
+  // Pull trigger
+  if (sub === 'pull') {
+    const room = global.rrRooms[message.channel.id];
+    if (!room || !room.started) return message.reply('No ongoing Russian Roulette game in this channel.');
+
+    if (room.players[room.currentTurn] !== message.author.id) return message.reply("It's not your turn!");
+
+    const chamber = room.currentChamber;
+    const bullet = room.bulletChamber;
+
+    if (chamber === bullet) {
+      // Player "dies"
+      const deadPlayer = message.author;
+      room.players.splice(room.currentTurn, 1);
+      room.currentChamber = 1; // reset chamber after each shot
+      room.bulletChamber = Math.floor(Math.random() * 6) + 1; // new bullet position
+
+      message.channel.send(`💥 Bang! <@${deadPlayer.id}> has been eliminated!`);
+
+      // Check if only one player remains
+      if (room.players.length === 1) {
+        message.channel.send(`🏆 <@${room.players[0]}> is the last survivor and wins Russian Roulette!`);
+        delete global.rrRooms[message.channel.id];
+        return;
+      }
+
+      // Adjust currentTurn because array got smaller
+      if (room.currentTurn >= room.players.length) room.currentTurn = 0;
+
+      message.channel.send(`Next turn: <@${room.players[room.currentTurn]}>. Type \`${prefix}rr pull\` to pull the trigger.`);
+
+      return;
+    } else {
+      // Player survives
+      message.channel.send(`🔫 Click. <@${message.author.id}> survived this round.`);
+
+      // Advance turn and chamber
+      room.currentTurn = (room.currentTurn + 1) % room.players.length;
+      room.currentChamber = chamber === 6 ? 1 : chamber + 1;
+
+      message.channel.send(`Next turn: <@${room.players[room.currentTurn]}>. Type \`${prefix}rr pull\` to pull the trigger.`);
+
+      return;
+    }
+  }
+
+  // If no subcommand matched, show usage
+  return message.channel.send(`Russian Roulette commands:
+\`${prefix}rr create\` – create a room (max 6 players)
+\`${prefix}rr join\` – join the room
+\`${prefix}rr leave\` – leave the room
+\`${prefix}rr cancel\` – cancel the room (host only)
+\`${prefix}rr start\` – start the game (host only, min 2 players)
+\`${prefix}rr pull\` – pull the trigger on your turn
+`);
+}
+
     // ================== HELP COMMAND ==================
 
     if (command === 'help') {
@@ -950,6 +1091,15 @@ Type \`${prefix}poker [bet|raise|call|check|fold] [amount]\` to play.`);
 \`${prefix}poker call\` – call the current bet
 \`${prefix}poker check\` – check (if no bet)
 \`${prefix}poker fold\` – fold your hand
+
+**Russian Roulette Commands:**
+
+\`${prefix}rr create\` – create a room (max 6 players)
+\`${prefix}rr join\` – join the room
+\`${prefix}rr leave\` – leave the room
+\`${prefix}rr cancel\` – cancel the room (host only)
+\`${prefix}rr start\` – start the game (host only, min 2 players)
+\`${prefix}rr pull\` – pull the trigger on your turn
 
 \`${prefix}help\` – Show this help message
       `);
