@@ -526,8 +526,6 @@ if (command === 'roulette') {
   return message.channel.send(winText);
 }
 
-    const pokerTables = {};
-
 if (command === 'poker') {
   const sub = args[0]?.toLowerCase();
 
