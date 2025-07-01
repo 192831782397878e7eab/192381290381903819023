@@ -885,8 +885,21 @@ Current Round: ${table.round}
 Current Bet: 💰 **${table.currentBet} coins**
 Type \`${prefix}poker [bet|raise|call|check|fold] [amount]\` to play.`);
   }
-    
-  );
+
+  // Help message
+  return message.channel.send(`Poker commands:
+\`${prefix}poker create\ – create a poker table
+\`${prefix}poker join\ – join the table
+\`${prefix}poker leave\ – leave the table
+\`${prefix}poker cancel\ – cancel the table (host only)
+\`${prefix}poker start\ – start the game (host only)
+\`${prefix}poker status\ – show current game status
+\`${prefix}poker bet [amount]\ – bet coins
+\`${prefix}poker raise [amount]\ – raise the bet
+\`${prefix}poker call\ – call the current bet
+\`${prefix}poker check\ – check (if no bet)
+\`${prefix}poker fold\ – fold your hand
+  `);
 }
 
     // ================== HELP COMMAND ==================
@@ -926,17 +939,17 @@ Type \`${prefix}poker [bet|raise|call|check|fold] [amount]\` to play.`);
 
 **Poker Commands:**
 
-\`${prefix}poker create\ – create a poker table
-\`${prefix}poker join\ – join the table
-\`${prefix}poker leave\ – leave the table
-\`${prefix}poker cancel\ – cancel the table (host only)
-\`${prefix}poker start\ – start the game (host only)
-\`${prefix}poker status\ – show current game status
-\`${prefix}poker bet [amount]\ – bet coins
-\`${prefix}poker raise [amount]\ – raise the bet
-\`${prefix}poker call\ – call the current bet
-\`${prefix}poker check\ – check (if no bet)
-\`${prefix}poker fold\ – fold your hand
+\`${prefix}poker create\` – create a poker table
+\`${prefix}poker join\` – join the table
+\`${prefix}poker leave\` – leave the table
+\`${prefix}poker cancel\` – cancel the table (host only)
+\`${prefix}poker start\` – start the game (host only)
+\`${prefix}poker status\` – show current game status
+\`${prefix}poker bet [amount]\` – bet coins
+\`${prefix}poker raise [amount]\` – raise the bet
+\`${prefix}poker call\` – call the current bet
+\`${prefix}poker check\` – check (if no bet)
+\`${prefix}poker fold\` – fold your hand
 
 \`${prefix}help\` – Show this help message
       `);
