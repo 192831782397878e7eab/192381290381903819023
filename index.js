@@ -442,6 +442,47 @@ if (command === 'give') {
   return message.reply(resultMessage);
 }
 
+    if (command === 'givemoney') {
+  if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+    return message.reply("You don't have permission to use this command.");
+  }
+
+  const target = message.mentions.users.first() || message.author;
+  const amount = parseInt(args[1] ?? args[0]);
+
+  if (!amount || isNaN(amount) || amount <= 0) {
+    return message.reply("Please specify a valid amount of coins to give.");
+  }
+
+  const user = getUser(target.id);
+  user.cash += amount;
+  saveDB();
+
+  return message.channel.send(`${target.tag} has been given 💰 **${amount} coins**.`);
+}
+
+    if (command === 'removemoney') {
+      
+  if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+    return message.reply("You don't have permission to use this command.");
+  }
+
+  const target = message.mentions.users.first() || message.author;
+  const amount = parseInt(args[1] ?? args[0]);
+
+  if (!amount || isNaN(amount) || amount <= 0) {
+    return message.reply("Please specify a valid amount of coins to remove.");
+  }
+
+  const user = getUser(target.id);
+
+  user.cash = Math.max(0, user.cash - amount);
+  saveDB();
+
+  return message.channel.send(`Removed 💸 **${amount} coins** from ${target.tag}. New balance: 💰 **${user.cash} coins**.`);
+}
+
+
 
     // ================== HELP COMMAND ==================
 
@@ -472,6 +513,10 @@ if (command === 'give') {
 \`${prefix}give @user [amount]\` – send cash to another user
 \`${prefix}work\` – work every 30 minutes to earn cash
 \`${prefix}slots [amount]\` – play slots and try your luck (6s cooldown)
+
+**Admin Cash Commands:**
+\`${prefix}givemoney [@user] [amount]\` – give coins to yourself or another user (admin only)
+\`${prefix}removemoney [@user] [amount]\` – remove coins from a user (admin only)
 
 \`${prefix}help\` – Show this help message
       `);
