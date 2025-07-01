@@ -29,6 +29,12 @@ function getUser(userId) {
 
 const prefix = '.';
 
+function hasPermission(message, permission) {
+  if (message.channel.type === 1 || message.channel.type === 'DM') return true;
+  return message.member?.permissions?.has(permission);
+}
+
+
 function normalize(text) {
   return text.toLowerCase().replace(/[\s\.\-_\u200B\\/]/g, '');
 }
@@ -56,7 +62,7 @@ client.on('messageCreate', async message => {
     // ================== MODERATION COMMANDS ==================
 
     if (command === 'ban') {
-      if (!message.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
+      if (!hasPermission(message, PermissionsBitField.Flags.BanMembers)) {
         return message.reply("You don't have permission to ban members.");
       }
       const user = message.mentions.users.first();
@@ -75,7 +81,7 @@ client.on('messageCreate', async message => {
     }
 
     if (command === 'mute') {
-      if (!message.member.permissions.has(PermissionsBitField.Flags.MuteMembers)) {
+      if (!hasPermission(message, PermissionsBitField.Flags.MuteMembers)) {
         return message.reply("You don't have permission to mute members.");
       }
       const user = message.mentions.users.first();
@@ -96,7 +102,7 @@ client.on('messageCreate', async message => {
       return;
     }
 if (command === 'delmsg') {
-  if (!message.member.permissions.has(PermissionsBitField.Flags.ManageMessages)) {
+  if (!hasPermission(message, PermissionsBitField.Flags.ManageMessages)) {
     return message.reply("You don't have permission to delete messages, you peasant.");
   }
 
@@ -153,7 +159,7 @@ if (command === 'bypass') {
 
 
     if (command === 'unmute') {
-      if (!message.member.permissions.has(PermissionsBitField.Flags.MuteMembers)) {
+      if (!hasPermission(message, PermissionsBitField.Flags.MuteMembers)) {
         return message.reply("You don't have permission to unmute members.");
       }
       const user = message.mentions.users.first();
@@ -191,7 +197,7 @@ if (command === 'phonebypass') {
 
 
     if (command === 'kick') {
-      if (!message.member.permissions.has(PermissionsBitField.Flags.KickMembers)) {
+      if (!hasPermission(message, PermissionsBitField.Flags.KickMembers)) {
         return message.reply("You don't have permission to kick members.");
       }
       const user = message.mentions.users.first();
@@ -445,7 +451,7 @@ if (command === 'give') {
 }
 
     if (command === 'givemoney') {
-  if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+  if (!hasPermission(message, PermissionsBitField.Flags.Administrator)) {
     return message.reply("You don't have permission to use this command.");
   }
 
@@ -465,7 +471,7 @@ if (command === 'give') {
 
     if (command === 'removemoney') {
       
-  if (!message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+  if (!hasPermission(message, PermissionsBitField.Flags.Administrator)) {
     return message.reply("You don't have permission to use this command.");
   }
 
