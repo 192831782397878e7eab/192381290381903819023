@@ -10,6 +10,21 @@ const client = new Client({
   ]
 });
 
+const fs = require('fs');
+const dbFile = './cashDB.json';
+let db = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile)) : {};
+
+function saveDB() {
+  fs.writeFileSync(dbFile, JSON.stringify(db, null, 2));
+}
+
+function getUser(userId) {
+  if (!db[userId]) {
+    db[userId] = { cash: 0, lastDaily: 0 };
+  }
+  return db[userId];
+}
+
 const prefix = '.';
 
 function normalize(text) {
@@ -235,7 +250,7 @@ if (command === 'say') {
       return message.channel.send(`🎱 ${answer}`);
     }
 
-    if (command === 'coinflip') {
+    if (command === 'cf') {
       const result = Math.random() < 0.5 ? "Heads 🪙" : "Tails 🪙";
       return message.channel.send(result);
     }
@@ -289,6 +304,79 @@ if (command === 'say') {
       return message.channel.send('here nro ❤ https://cataas.com/cat');
     }
 
+    if (command === 'daily') {
+  const user = getUser(message.author.id);
+  const now = Date.now();
+  const dailyCooldown = 24 * 60 * 60 * 1000;
+
+  if (now - user.lastDaily < dailyCooldown) {
+    const remaining = dailyCooldown - (now - user.lastDaily);
+    const hours = Math.floor(remaining / (60 * 60 * 1000));
+    const minutes = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+    return message.reply(`You already claimed your daily reward. Come back in ${hours}h ${minutes}m.`);
+  }
+
+  const reward = Math.floor(Math.random() * 500) + 250; // 250-749
+  user.cash += reward;
+  user.lastDaily = now;
+  saveDB();
+  return message.reply(`You claimed your daily reward: 💰 **${reward} coins**!`);
+}
+
+if (command === 'bal' || command === 'balance') {
+  const user = getUser(message.author.id);
+  return message.reply(`You have 💰 **${user.cash} coins**.`);
+}
+
+if (command === 'coinflip') {
+  const guess = args[0]?.toLowerCase();
+  const amount = parseInt(args[1]);
+
+  if (!['heads', 'tails'].includes(guess)) {
+    return message.reply("Guess must be `heads` or `tails`.");
+  }
+  if (isNaN(amount) || amount <= 0) {
+    return message.reply("Please enter a valid coin amount.");
+  }
+
+  const user = getUser(message.author.id);
+  if (user.cash < amount) {
+    return message.reply("You don't have enough coins.");
+  }
+
+  const result = Math.random() < 0.5 ? 'heads' : 'tails';
+  let reply = `🪙 The coin landed on **${result}**.\n`;
+
+  if (guess === result) {
+    user.cash += amount;
+    reply += `You won 💰 **${amount} coins**!`;
+  } else {
+    user.cash -= amount;
+    reply += `You lost 💸 **${amount} coins**.`;
+  }
+
+  saveDB();
+  return message.reply(reply);
+}
+
+if (command === 'give') {
+  const target = message.mentions.users.first();
+  const amount = parseInt(args[1]);
+
+  if (!target || target.bot) return message.reply("Mention a valid user.");
+  if (isNaN(amount) || amount <= 0) return message.reply("Enter a valid amount.");
+
+  const sender = getUser(message.author.id);
+  const receiver = getUser(target.id);
+
+  if (sender.cash < amount) return message.reply("You don't have enough coins.");
+
+  sender.cash -= amount;
+  receiver.cash += amount;
+  saveDB();
+
+  return message.channel.send(`${message.author} gave 💰 **${amount} coins** to ${target}.`);
+}
     // ================== HELP COMMAND ==================
 
     if (command === 'help') {
@@ -304,12 +392,18 @@ if (command === 'say') {
 \`${prefix}ping\` – pong.
 \`${prefix}say [text]\` – make the bot say something
 \`${prefix}8ball [question]\` – ask the magic 8ball
-\`${prefix}coinflip\` – flip a coin
+\`${prefix}cf\` – flip a coin
 \`${prefix}roll\` – roll a number (1-100)
 \`${prefix}slur @user\` – slur at someone
 \`${prefix}cat\` – random cat pic
 \`${prefix}bypass\` – chat bypasser for roblox
 \`${prefix}phonebypass\` – bypasses for yggdrasil and payphone
+
+**User Cash Commands:**
+\`${prefix}daily\` – collect a daily 💰 reward (once every 24h)
+\`${prefix}bal or balance\` – check how much 💰 cash you have
+\`${prefix}coinflip heads/tails [amount]\` – bet coins on a 50/50 coinflip
+\`${prefix}give @user [amount]\` – send cash to another user
 
 \`${prefix}help\` – Show this help message
       `);
