@@ -14,17 +14,29 @@ const client = new Client({
 
 const fs = require('fs');
 const dbFile = './cashDB.json';
-let db = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile)) : {};
+
+let db = fs.existsSync(dbFile) ? JSON.parse(fs.readFileSync(dbFile)) : {
+  global: {},
+  servers: {}
+};
 
 function saveDB() {
   fs.writeFileSync(dbFile, JSON.stringify(db, null, 2));
 }
 
-function getUser(userId) {
-  if (!db[userId]) {
-    db[userId] = { cash: 0, lastDaily: 0 };
+function getGlobalUser(userId) {
+  if (!db.global[userId]) {
+    db.global[userId] = { cash: 0, lastDaily: 0, lastWork: 0, lastSlots: 0 };
   }
-  return db[userId];
+  return db.global[userId];
+}
+
+function getServerUser(guildId, userId) {
+  if (!db.servers[guildId]) db.servers[guildId] = {};
+  if (!db.servers[guildId][userId]) {
+    db.servers[guildId][userId] = { cash: 0 };
+  }
+  return db.servers[guildId][userId];
 }
 
 const prefix = '.';
@@ -450,13 +462,7 @@ if (command === 'give') {
   return message.reply(resultMessage);
 }
 
- if (command === 'givemoney') {
-  console.log("givemoney command triggered");
-
-  if (!message.guild) {
-    return message.reply("This command only works in servers.");
-  }
-
+   if (command === 'givemoney') {
   if (!hasPermission(message, PermissionsBitField.Flags.Administrator)) {
     return message.reply("You don't have permission to use this command.");
   }
@@ -468,20 +474,20 @@ if (command === 'give') {
     return message.reply("Please specify a valid amount of coins to give.");
   }
 
-  const user = getServerUser(message.guild.id, target.id);
-  user.cash += amount;
+  const serverUser = getServerUser(message.guild.id, target.id);
+  const globalUser = getGlobalUser(target.id);
 
-  const realBalance = getUser(target.id).cash;
+  serverUser.cash += amount;
   saveDB();
 
-  return message.channel.send(`${target.tag} has been given 💰 **${amount} coins** on this server only.\nAlways remember: this command only affects this server's economy. Your global balance is still: 💰 **${realBalance} coins**.`);
+  return message.channel.send(
+    `${target.tag} has been given 💰 **${amount} coins** on this server.\n` +
+    `This affects **only this server's economy**.\n` +
+    `Their global balance is still: 💰 **${globalUser.cash} coins**.`
+  );
 }
 
-   if (command === 'removemoney') {
-  if (!message.guild) {
-    return message.reply("This command only works in servers.");
-  }
-
+    if (command === 'removemoney') {
   if (!hasPermission(message, PermissionsBitField.Flags.Administrator)) {
     return message.reply("You don't have permission to use this command.");
   }
@@ -493,13 +499,17 @@ if (command === 'give') {
     return message.reply("Please specify a valid amount of coins to remove.");
   }
 
-  const user = getServerUser(message.guild.id, target.id);
-  user.cash = Math.max(0, user.cash - amount);
+  const serverUser = getServerUser(message.guild.id, target.id);
+  const globalUser = getGlobalUser(target.id);
 
-  const realBalance = getUser(target.id).cash;
+  serverUser.cash = Math.max(0, serverUser.cash - amount);
   saveDB();
 
-  return message.channel.send(`Removed 💸 **${amount} coins** from ${target.tag} on this server only.\nAlways remember: this command only affects this server's economy. Their global balance is still: 💰 **${realBalance} coins**.`);
+  return message.channel.send(
+    `Removed **${amount} coins** from ${target.tag} on this server.\n` +
+    `This affects **only this server's economy**.\n` +
+    `Their global balance is still: 💰 **${globalUser.cash} coins**.`
+  );
 }
 
     if (command === 'roulette') {
