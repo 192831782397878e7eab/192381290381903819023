@@ -450,7 +450,8 @@ if (command === 'give') {
   return message.reply(resultMessage);
 }
 
-    if (command === 'givemoney') {
+  if (command === 'givemoney') {
+  if (!message.guild) return message.reply("This command only works in servers.");
   if (!hasPermission(message, PermissionsBitField.Flags.Administrator)) {
     return message.reply("You don't have permission to use this command.");
   }
@@ -462,15 +463,19 @@ if (command === 'give') {
     return message.reply("Please specify a valid amount of coins to give.");
   }
 
-  const user = getUser(target.id);
+  const user = getServerUser(message.guild.id, target.id);
   user.cash += amount;
+
+  const realBalance = getUser(target.id).cash;
   saveDB();
 
-  return message.channel.send(`${target.tag} has been given 💰 **${amount} coins**.`);
+  return message.channel.send(`${target.tag} has been given 💰 **${amount} coins** on this server only.\nAlways remember: this command only affects this server's economy. Your global balance is still: 💰 **${realBalance} coins**.`);
 }
+   if (command === 'removemoney') {
+  if (!message.guild) {
+    return message.reply("This command only works in servers.");
+  }
 
-    if (command === 'removemoney') {
-      
   if (!hasPermission(message, PermissionsBitField.Flags.Administrator)) {
     return message.reply("You don't have permission to use this command.");
   }
@@ -482,12 +487,13 @@ if (command === 'give') {
     return message.reply("Please specify a valid amount of coins to remove.");
   }
 
-  const user = getUser(target.id);
-
+  const user = getServerUser(message.guild.id, target.id);
   user.cash = Math.max(0, user.cash - amount);
+
+  const realBalance = getUser(target.id).cash;
   saveDB();
 
-  return message.channel.send(`Removed 💸 **${amount} coins** from ${target.tag}. New balance: 💰 **${user.cash} coins**.`);
+  return message.channel.send(`Removed 💸 **${amount} coins** from ${target.tag} on this server only.\nAlways remember: this command only affects this server's economy. Their global balance is still: 💰 **${realBalance} coins**.`);
 }
 
     if (command === 'roulette') {
