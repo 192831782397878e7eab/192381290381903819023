@@ -1177,6 +1177,7 @@ if (command === 'rr') {
 \`${prefix}phonebypass\` – bypasses for yggdrasil and payphone
 
 **User Cash Commands:**
+\`${prefix}wallet [global/server]\` – switch wallets between server wallet and global
 \`${prefix}daily\` – collect a daily 💰 reward (once every 24h)
 \`${prefix}bal or balance\` – check how much 💰 cash you have
 \`${prefix}coinflip heads/tails [amount]\` – bet coins on a 50/50 coinflip
@@ -1184,6 +1185,7 @@ if (command === 'rr') {
 \`${prefix}work\` – work every 30 minutes to earn cash
 \`${prefix}slots [amount]\` – play slots and try your luck (6s cooldown)
 \`${prefix}roulette [color] [amount]\` – bet coins on red/black (2x) or green (14x)
+\`${prefix}rob @user\` – rob someone
 
 **Admin Cash Commands:**
 \`${prefix}givemoney [@user] [amount]\` – give coins to yourself or another user (admin only)
