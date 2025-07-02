@@ -450,8 +450,13 @@ if (command === 'give') {
   return message.reply(resultMessage);
 }
 
-  if (command === 'givemoney') {
-  if (!message.guild) return message.reply("This command only works in servers.");
+ if (command === 'givemoney') {
+  console.log("givemoney command triggered");
+
+  if (!message.guild) {
+    return message.reply("This command only works in servers.");
+  }
+
   if (!hasPermission(message, PermissionsBitField.Flags.Administrator)) {
     return message.reply("You don't have permission to use this command.");
   }
@@ -471,6 +476,7 @@ if (command === 'give') {
 
   return message.channel.send(`${target.tag} has been given 💰 **${amount} coins** on this server only.\nAlways remember: this command only affects this server's economy. Your global balance is still: 💰 **${realBalance} coins**.`);
 }
+
    if (command === 'removemoney') {
   if (!message.guild) {
     return message.reply("This command only works in servers.");
