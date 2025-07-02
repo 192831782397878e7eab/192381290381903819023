@@ -46,6 +46,7 @@ function getWalletUser(guildId, userId) {
 }
 
 let walletMode = {};
+let robCooldown = {};
 
 function getWalletMode(userId) {
   return walletMode[userId] || 'global';
@@ -88,7 +89,48 @@ client.on('messageCreate', async message => {
     const command = args.shift().toLowerCase();
 
     // ================== MODERATION COMMANDS ==================
+    
+     if (command === 'rob') {
+      const target = message.mentions.users.first();
+      if (!target) return message.reply("Please mention a user to rob.");
+      
+      const user = getGlobalUser(message.author.id);
+      const now = Date.now();
+      
+      // Check for cooldown
+      if (robCooldown[message.author.id] && now - robCooldown[message.author.id] < 20 * 60 * 1000) {
+        const remainingTime = 20 * 60 * 1000 - (now - robCooldown[message.author.id]);
+        const minutes = Math.floor(remainingTime / 60000);
+        const seconds = Math.floor((remainingTime % 60000) / 1000);
+        return message.reply(`@${message.author.username} the police are still after you! Wait ${minutes}m ${seconds}s to rob again.`);
+      }
 
+      // Update rob cooldown
+      robCooldown[message.author.id] = now;
+
+      // Simulate success/failure
+      const success = Math.random() > 0.3; // 70% success rate
+
+      if (success) {
+        const stolenAmount = Math.floor(Math.random() * (2500 - 300 + 1)) + 300; // Between 300 and 2500
+        const targetUser = getGlobalUser(target.id);
+        targetUser.cash -= stolenAmount; // Deduct coins from the target
+        user.cash += stolenAmount; // Add coins to the user
+        saveDB();
+        
+        message.channel.send(`@${message.author.username} stole 💰 **${stolenAmount.toLocaleString()} coins** from @${target.username}!`);
+      } else {
+        // Robbery failed, deduct a fee
+        const fee = Math.min(robFailFee, user.cash); // If the user doesn't have enough, take all their coins
+        user.cash -= fee;
+        saveDB();
+        
+        message.channel.send(`@${message.author.username} got caught! You lost 💸 **${fee.toLocaleString()} coins** as a penalty.`);
+      }
+
+      return;
+    }
+    
     if (command === 'ban') {
       if (!hasPermission(message, PermissionsBitField.Flags.BanMembers)) {
         return message.reply("You don't have permission to ban members.");
@@ -368,15 +410,14 @@ if (command === 'say') {
   return message.reply(`You claimed your daily reward: 💰 **${reward} coins**!`);
 }
 
-if (command === 'bal' || command === 'balance') {
-  const globalUser = getGlobalUser(message.author.id);
-  const serverUser = getServerUser(message.guild.id, message.author.id);
-
-  return message.reply(
-    `Global Balance: 💰 **${globalUser.cash} coins**\n` +
-    `Server Balance: 💰 **${serverUser.cash} coins** (used with .givemoney)`
-  );
-}
+ if (command === 'bal' || command === 'balance') {
+      const globalUser = getGlobalUser(message.author.id);
+      const serverUser = getServerUser(message.guild.id, message.author.id);
+      return message.reply(
+      `Global Balance: 💰 **${globalUser.cash.toLocaleString()} coins**\n` +
+      `Server Balance: 💰 **${serverUser.cash.toLocaleString()} coins** (used with .givemoney)`
+    );
+ }
 
 if (command === 'coinflip') {
   const guess = args[0]?.toLowerCase();
