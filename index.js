@@ -39,6 +39,21 @@ function getServerUser(guildId, userId) {
   return db.servers[guildId][userId];
 }
 
+function getWalletUser(guildId, userId) {
+  const mode = getWalletMode(userId);
+  return mode === 'server' ? getServerUser(guildId, userId) : getGlobalUser(userId);
+}
+
+let walletMode = {};
+
+function getWalletMode(userId) {
+  return walletMode[userId] || 'global';
+}
+
+function setWalletMode(userId, mode) {
+  walletMode[userId] = mode;
+}
+
 const prefix = '.';
 
 function hasPermission(message, permission) {
@@ -207,6 +222,15 @@ if (command === 'phonebypass') {
   });
 }
 
+    if (command === 'wallet') {
+  const mode = args[0]?.toLowerCase();
+  if (!['global', 'server'].includes(mode)) {
+    return message.reply("Usage: `.wallet global` or `.wallet server`");
+  }
+
+  setWalletMode(message.author.id, mode);
+  return message.reply(`Your wallet mode is now set to **${mode}**. You will use **${mode} coins** for games like .coinflip, .slots, .poker, etc.`);
+}
 
     if (command === 'kick') {
       if (!hasPermission(message, PermissionsBitField.Flags.KickMembers)) {
@@ -325,7 +349,7 @@ if (command === 'say') {
     }
 
     if (command === 'daily') {
-  const user = getUser(message.author.id);
+  const user = getGlobalUser(message.author.id);
   const now = Date.now();
   const dailyCooldown = 24 * 60 * 60 * 1000;
 
@@ -344,8 +368,13 @@ if (command === 'say') {
 }
 
 if (command === 'bal' || command === 'balance') {
-  const user = getUser(message.author.id);
-  return message.reply(`You have 💰 **${user.cash} coins**.`);
+  const globalUser = getGlobalUser(message.author.id);
+  const serverUser = getServerUser(message.guild.id, message.author.id);
+
+  return message.reply(
+    `Global Balance: 💰 **${globalUser.cash} coins**\n` +
+    `Server Balance: 💰 **${serverUser.cash} coins** (used with .givemoney)`
+  );
 }
 
 if (command === 'coinflip') {
@@ -359,7 +388,11 @@ if (command === 'coinflip') {
     return message.reply("Please enter a valid coin amount.");
   }
 
-  const user = getUser(message.author.id);
+  const wallet = getWalletMode(message.author.id);
+  const user = wallet === 'server'
+    ? getServerUser(message.guild.id, message.author.id)
+    : getGlobalUser(message.author.id);
+
   if (user.cash < amount) {
     return message.reply("You don't have enough coins.");
   }
@@ -386,8 +419,8 @@ if (command === 'give') {
   if (!target || target.bot) return message.reply("Mention a valid user.");
   if (isNaN(amount) || amount <= 0) return message.reply("Enter a valid amount.");
 
-  const sender = getUser(message.author.id);
-  const receiver = getUser(target.id);
+  const sender = getGlobalUser(message.author.id);
+  const receiver = getGlobalUser(target.id);
 
   if (sender.cash < amount) return message.reply("You don't have enough coins.");
 
@@ -397,9 +430,9 @@ if (command === 'give') {
 
   return message.channel.send(`${message.author} gave 💰 **${amount} coins** to ${target}.`);
 }
-
+  
     if (command === 'work') {
-  const user = getUser(message.author.id);
+  const user = getGlobalUser(message.author.id);
   const now = Date.now();
   const workCooldown = 30 * 60 * 1000;
 
@@ -418,13 +451,17 @@ if (command === 'give') {
   return message.reply(`you worked hard and earned 💰 **${earnings} coins**!`);
 }
 
-    if (command === 'slots' || command === 'slot') {
+   if (command === 'slots' || command === 'slot') {
   const amount = parseInt(args[0]);
   if (isNaN(amount) || amount <= 0) return message.reply("Enter a valid amount to bet.");
 
-  const user = getUser(message.author.id);
+  const wallet = getWalletMode(message.author.id);
+  const user = wallet === 'server'
+    ? getServerUser(message.guild.id, message.author.id)
+    : getGlobalUser(message.author.id);
+
   const now = Date.now();
-  const cooldown = 6 * 1000;
+  const cooldown = 6000;
 
   if (user.lastSlots && now - user.lastSlots < cooldown) {
     const remaining = cooldown - (now - user.lastSlots);
@@ -512,7 +549,7 @@ if (command === 'give') {
   );
 }
 
-    if (command === 'roulette') {
+   if (command === 'roulette') {
   const color = args[0]?.toLowerCase();
   const amount = parseInt(args[1]);
 
@@ -524,7 +561,11 @@ if (command === 'give') {
     return message.reply("Enter a valid coin amount to bet.");
   }
 
-  const user = getUser(message.author.id);
+  const wallet = getWalletMode(message.author.id);
+  const user = wallet === 'server'
+    ? getServerUser(message.guild.id, message.author.id)
+    : getGlobalUser(message.author.id);
+
   if (user.cash < amount) {
     return message.reply("You don't have enough coins.");
   }
@@ -540,9 +581,7 @@ if (command === 'give') {
   let winText = `🎰 The ball landed on **${spin} (${resultColor})**.`;
 
   if (color === resultColor) {
-    if (color === 'green') winAmount = amount * 14;
-    else winAmount = amount * 2;
-
+    winAmount = color === 'green' ? amount * 14 : amount * 2;
     user.cash += winAmount;
     winText += `\nYou won 💰 **${winAmount} coins**! 🎉`;
   } else {
@@ -734,7 +773,7 @@ if (command === 'poker') {
       return message.reply("You have already folded.");
     }
 
-    const user = getUser(playerId);
+    const user = getWalletUser(message.guild.id, playerId);
     const minBet = table.currentBet;
 
     if (sub === 'fold') {
@@ -789,7 +828,7 @@ if (command === 'poker') {
 
           const winnerUser = await client.users.fetch(winnerId);
           winnerUser ? message.channel.send(`🏆 <@${winnerId}> wins with the best hand! 💰 **${table.pot} coins**`) : null;
-          const winnerUserDB = getUser(winnerId);
+          const winnerUserDB = getWalletUser(message.guild.id, winnerId);
           winnerUserDB.cash += table.pot;
           saveDB();
 
@@ -848,7 +887,7 @@ if (command === 'poker') {
 
           const winnerUser = await client.users.fetch(winnerId);
           winnerUser ? message.channel.send(`🏆 <@${winnerId}> wins with the best hand! 💰 **${table.pot} coins**`) : null;
-          const winnerUserDB = getUser(winnerId);
+          const winnerUserDB = getWalletUser(message.guild.id, winnerId);
           winnerUserDB.cash += table.pot;
           saveDB();
 
@@ -870,7 +909,7 @@ if (command === 'poker') {
       if (isNaN(amount) || amount <= 0) {
         return message.reply("Please specify a valid bet amount.");
       }
-      const user = getUser(playerId);
+      const user = getWalletUser(message.guild.id, playerId);
       const playerBet = table.bets[playerId] || 0;
       const toCall = table.currentBet - playerBet;
 
