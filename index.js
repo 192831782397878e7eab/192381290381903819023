@@ -1223,8 +1223,7 @@ if (command === 'rr') {
 
   const normalized = normalize(message.content);
 
-  if (message.channel.type !== 'DM' && !hasPermission(message, PermissionsBitField.Flags.Administrator)) {
-    if (
+  if (
     normalized.includes('discordgg') ||
     normalized.includes('discordcominvite') ||
     normalized.includes('discordappcominvite')
