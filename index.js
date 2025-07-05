@@ -99,7 +99,6 @@ client.on('messageCreate', async message => {
       
       // Check for cooldown
       if (robCooldown[message.author.id] && now - robCooldown[message.author.id] < 20 * 60 * 1000) {
-        const success = Math.random() > 0.3; // 70% success rate
         const remainingTime = 20 * 60 * 1000 - (now - robCooldown[message.author.id]);
         const minutes = Math.floor(remainingTime / 60000);
         const seconds = Math.floor((remainingTime % 60000) / 1000);
@@ -1225,6 +1224,7 @@ if (command === 'rr') {
   const normalized = normalize(message.content);
 
   if (message.channel.type !== 'DM' && !hasPermission(message, PermissionsBitField.Flags.Administrator)) {
+    if (
     normalized.includes('discordgg') ||
     normalized.includes('discordcominvite') ||
     normalized.includes('discordappcominvite')
