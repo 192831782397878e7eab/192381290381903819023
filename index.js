@@ -90,71 +90,46 @@ client.on('messageCreate', async message => {
 
     // ================== MODERATION COMMANDS ==================
     
-    if (command === 'rob') {
-  const target = message.mentions.users.first();
-  if (!target) return message.reply("Please mention a user to rob.");
-  
-  const user = getGlobalUser(message.author.id);
-  const now = Date.now();
-  
-  if (robCooldown[message.author.id] && now - robCooldown[message.author.id] < 20 * 60 * 1000) {
-    const remainingTime = 20 * 60 * 1000 - (now - robCooldown[message.author.id]);
-    const minutes = Math.floor(remainingTime / 60000);
-    const seconds = Math.floor((remainingTime % 60000) / 1000);
-    return message.reply(`@${message.author.username} the police are still after you! Wait ${minutes}m ${seconds}s to rob again.`);
-  }
+     if (command === 'rob') {
+      const target = message.mentions.users.first();
+      if (!target) return message.reply("Please mention a user to rob.");
+      
+      const user = getGlobalUser(message.author.id);
+      const now = Date.now();
+      
+      // Check for cooldown
+      if (robCooldown[message.author.id] && now - robCooldown[message.author.id] < 20 * 60 * 1000) {
+        const remainingTime = 20 * 60 * 1000 - (now - robCooldown[message.author.id]);
+        const minutes = Math.floor(remainingTime / 60000);
+        const seconds = Math.floor((remainingTime % 60000) / 1000);
+        return message.reply(`@${message.author.username} the police are still after you! Wait ${minutes}m ${seconds}s to rob again.`);
+      }
 
-  robCooldown[message.author.id] = now;
+      // Update rob cooldown
+      robCooldown[message.author.id] = now;
 
-  const stolenAmount = Math.floor(Math.random() * (2500 - 300 + 1)) + 300; // Between 300 and 2500
-  const targetUser = getGlobalUser(target.id);
-  targetUser.cash -= stolenAmount;
-  user.cash += stolenAmount;
-  saveDB();
-  
-  message.channel.send(`@${message.author.username} stole 💰 **${stolenAmount.toLocaleString()} coins** from @${target.username}!`);
-  return;
-}
-    if (command === 'linkblock') {
-  if (!hasPermission(message, PermissionsBitField.Flags.Administrator)) {
-    return message.reply("You don't have permission to use this command.");
-  }
+      // Simulate success/failure
+      const success = Math.random() > 0.3; // 70% success rate
 
-  // Disable all link and file blocking
-  db.servers[message.guild.id] = db.servers[message.guild.id] || {};
-  db.servers[message.guild.id].adminEmbedOnly = false; // Reset blocking
-  saveDB();
+      if (success) {
+        const stolenAmount = Math.floor(Math.random() * (2500 - 300 + 1)) + 300; // Between 300 and 2500
+        const targetUser = getGlobalUser(target.id);
+        targetUser.cash -= stolenAmount; // Deduct coins from the target
+        user.cash += stolenAmount; // Add coins to the user
+        saveDB();
+        
+        message.channel.send(`@${message.author.username} stole 💰 **${stolenAmount.toLocaleString()} coins** from @${target.username}!`);
+      } else {
+        // Robbery failed, deduct a fee
+        const fee = Math.min(robFailFee, user.cash); // If the user doesn't have enough, take all their coins
+        user.cash -= fee;
+        saveDB();
+        
+        message.channel.send(`@${message.author.username} got caught! You lost 💸 **${fee.toLocaleString()} coins** as a penalty.`);
+      }
 
-  message.channel.send("Link and file blocking is now fully disabled. Everyone can send links and upload files.");
-}
-
-if (command === 'adminembedonly') {
-  if (!hasPermission(message, PermissionsBitField.Flags.Administrator)) {
-    return message.reply("You don't have permission to use this command.");
-  }
-
-  // Enable admin-only embeds and file uploads
-  db.servers[message.guild.id] = db.servers[message.guild.id] || {};
-  db.servers[message.guild.id].adminEmbedOnly = true;
-  saveDB();
-
-  message.channel.send("Admin-only embeds and file uploads are now enabled.");
-}
-
-
-// ================== DISABLE .adminembedonly COMMAND ==================
-if (command === 'disableadminembedonly') {
-  if (!hasPermission(message, PermissionsBitField.Flags.Administrator)) {
-    return message.reply("You don't have permission to use this command.");
-  }
-
-  // Disable admin-only embeds and file uploads
-  db.servers[message.guild.id] = db.servers[message.guild.id] || {};
-  db.servers[message.guild.id].adminEmbedOnly = false;
-  saveDB();
-
-  message.channel.send("Admin-only embeds and file uploads are now disabled.");
-}
+      return;
+    }
     
     if (command === 'ban') {
       if (!hasPermission(message, PermissionsBitField.Flags.BanMembers)) {
@@ -1246,50 +1221,6 @@ if (command === 'rr') {
 
  // ================== LINK BLOCKING ==================
 
-  // Check if adminEmbedOnly feature is active for this server
-if (db.servers[message.guild.id]?.adminEmbedOnly) {
-  if (!hasPermission(message, PermissionsBitField.Flags.Administrator)) {
-    const normalizedMessage = normalize(message.content);
-
-    // Block links for non-admins
-    if (
-      normalizedMessage.includes('discordgg') ||
-      normalizedMessage.includes('discordcominvite') ||
-      normalizedMessage.includes('discordappcominvite')
-    ) {
-      try {
-        await message.delete();
-        await message.channel.send(`${message.author}, no one is here to see you promote your shitty server.`);
-      } catch (err) {
-        console.error('Failed to delete message:', err);
-      }
-      return;
-    }
-
-    // Block CDN discord links
-    if (normalizedMessage.includes('cdndiscord')) {
-      try {
-        await message.delete();
-        await message.channel.send(`${message.author}, file links are not allowed.`);
-      } catch (err) {
-        console.error('Failed to delete message:', err);
-      }
-      return;
-    }
-
-    // Block external links for non-admins
-    if (/https?:\/\//i.test(message.content)) {
-      try {
-        await message.delete();
-        await message.channel.send(`${message.author}, no external links allowed.`);
-      } catch (err) {
-        console.error('Failed to delete message:', err);
-      }
-      return;
-    }
-  }
-} else {
-  // If adminEmbedOnly is not active, run your old link block logic
   const normalized = normalize(message.content);
 
   if (
