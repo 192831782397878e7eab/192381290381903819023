@@ -155,37 +155,6 @@ if (command === 'disableadminembedonly') {
 
   message.channel.send("Admin-only embeds and file uploads are now disabled.");
 }
-
-
-// ================== BLOCKING LINKS BASED ON .adminembedonly ==================
-// Check if the admin-only feature is active and block non-admins from sending links or files
-if (db.servers[message.guild.id]?.adminEmbedOnly) {
-  if (!hasPermission(message, PermissionsBitField.Flags.Administrator)) {
-    const normalizedMessage = normalize(message.content);
-
-    // Block any kind of link if the feature is active
-    if (/https?:\/\//i.test(normalizedMessage)) {
-      try {
-        await message.delete();
-        await message.channel.send(`${message.author}, only admins can send links in this channel.`);
-      } catch (err) {
-        console.error('Failed to delete message:', err);
-      }
-      return;
-    }
-
-    // Block file uploads as well
-    if (message.attachments.size > 0) {
-      try {
-        await message.delete();
-        await message.channel.send(`${message.author}, only admins can upload files in this channel.`);
-      } catch (err) {
-        console.error('Failed to delete message:', err);
-      }
-      return;
-    }
-  }
-}
     
     if (command === 'ban') {
       if (!hasPermission(message, PermissionsBitField.Flags.BanMembers)) {
@@ -1277,6 +1246,50 @@ if (command === 'rr') {
 
  // ================== LINK BLOCKING ==================
 
+  // Check if adminEmbedOnly feature is active for this server
+if (db.servers[message.guild.id]?.adminEmbedOnly) {
+  if (!hasPermission(message, PermissionsBitField.Flags.Administrator)) {
+    const normalizedMessage = normalize(message.content);
+
+    // Block links for non-admins
+    if (
+      normalizedMessage.includes('discordgg') ||
+      normalizedMessage.includes('discordcominvite') ||
+      normalizedMessage.includes('discordappcominvite')
+    ) {
+      try {
+        await message.delete();
+        await message.channel.send(`${message.author}, no one is here to see you promote your shitty server.`);
+      } catch (err) {
+        console.error('Failed to delete message:', err);
+      }
+      return;
+    }
+
+    // Block CDN discord links
+    if (normalizedMessage.includes('cdndiscord')) {
+      try {
+        await message.delete();
+        await message.channel.send(`${message.author}, file links are not allowed.`);
+      } catch (err) {
+        console.error('Failed to delete message:', err);
+      }
+      return;
+    }
+
+    // Block external links for non-admins
+    if (/https?:\/\//i.test(message.content)) {
+      try {
+        await message.delete();
+        await message.channel.send(`${message.author}, no external links allowed.`);
+      } catch (err) {
+        console.error('Failed to delete message:', err);
+      }
+      return;
+    }
+  }
+} else {
+  // If adminEmbedOnly is not active, run your old link block logic
   const normalized = normalize(message.content);
 
   if (
